@@ -94,13 +94,15 @@ public class ValuesActivity extends AppCompatActivity {
             gas.put("max", gasMax);
             gas.put("min", gasMin);
 
-            Constants.databaseReference().child("values").child("humidity")
+            Constants.databaseReference().child(Constants.values).child(Constants.humidity)
                     .setValue(humidity).addOnFailureListener(e -> Constants.dismissDialog()).addOnSuccessListener(unused -> Constants.dismissDialog());
-            Constants.databaseReference().child("values").child("temperature")
+            Constants.databaseReference().child(Constants.values).child(Constants.temperature)
                     .setValue(temperature).addOnFailureListener(e -> Constants.dismissDialog()).addOnSuccessListener(unused -> Constants.dismissDialog());
-            Constants.databaseReference().child("values").child("gas")
+            Constants.databaseReference().child(Constants.values).child(Constants.gas)
                     .setValue(gas).addOnFailureListener(e -> Constants.dismissDialog()).addOnSuccessListener(unused -> Constants.dismissDialog());
-
+            Map<String, Object> obj = new HashMap<>();
+            obj.put("text", "You turn adjust the temperature/humidity values");
+            Constants.databaseReference().child(Constants.notifications).push().setValue(obj).addOnSuccessListener(unused1 -> Constants.dismissDialog());
         });
 
     }

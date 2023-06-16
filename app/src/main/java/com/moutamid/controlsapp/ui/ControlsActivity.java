@@ -10,6 +10,9 @@ import com.moutamid.controlsapp.R;
 import com.moutamid.controlsapp.databinding.ActivityControlsBinding;
 import com.suke.widget.SwitchButton;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ControlsActivity extends AppCompatActivity {
     ActivityControlsBinding binding;
     @Override
@@ -23,12 +26,12 @@ public class ControlsActivity extends AppCompatActivity {
 
         Constants.databaseReference().child("state").get().addOnSuccessListener(dataSnapshot -> {
             Constants.dismissDialog();
-            boolean humidity = dataSnapshot.child("humidity").getValue(Boolean.class);
-            boolean temperature = dataSnapshot.child("temperature").getValue(Boolean.class);
-            boolean gas = dataSnapshot.child("gas").getValue(Boolean.class);
-            binding.switchButtonHumidity.setChecked(humidity);
-            binding.switchButtonTemp.setChecked(temperature);
-            binding.switchButtonGas.setChecked(gas);
+            if (dataSnapshot.exists()){
+                boolean humidity = dataSnapshot.child("light").getValue(Boolean.class);
+                boolean gas = dataSnapshot.child("buzzer").getValue(Boolean.class);
+                binding.switchButtonHumidity.setChecked(humidity);
+                binding.switchButtonGas.setChecked(gas);
+            }
         }).addOnFailureListener(e -> {
             Constants.dismissDialog();
             Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -38,28 +41,29 @@ public class ControlsActivity extends AppCompatActivity {
 
         binding.switchButtonHumidity.setOnCheckedChangeListener((view, isChecked) -> {
             Constants.showDialog();
-            Constants.databaseReference().child("state").child("humidity").setValue(isChecked)
-                    .addOnSuccessListener(unused ->  Constants.dismissDialog())
+            Constants.databaseReference().child("state").child("light").setValue(isChecked)
+                    .addOnSuccessListener(unused -> {
+                        String text = isChecked ? "On" : "Off";
+                        Map<String, Object> obj = new HashMap<>();
+                        obj.put("text", "You turn light " + text);
+                        Constants.databaseReference().child(Constants.notifications).push().setValue(obj).addOnSuccessListener(unused1 -> Constants.dismissDialog());
+                    })
                     .addOnFailureListener(e -> {
                         Constants.dismissDialog();
                         Toast.makeText(ControlsActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                     });
         });
 
-        binding.switchButtonTemp.setOnCheckedChangeListener((view, isChecked) -> {
-            Constants.showDialog();
-            Constants.databaseReference().child("state").child("temperature").setValue(isChecked)
-                    .addOnSuccessListener(unused ->  Constants.dismissDialog())
-                    .addOnFailureListener(e -> {
-                        Constants.dismissDialog();
-                        Toast.makeText(ControlsActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
-        });
 
         binding.switchButtonGas.setOnCheckedChangeListener((view, isChecked) -> {
             Constants.showDialog();
-            Constants.databaseReference().child("state").child("gas").setValue(isChecked)
-                    .addOnSuccessListener(unused ->  Constants.dismissDialog())
+            Constants.databaseReference().child("state").child("buzzer").setValue(isChecked)
+                    .addOnSuccessListener(unused -> {
+                        String text = isChecked ? "On" : "Off";
+                        Map<String, Object> obj = new HashMap<>();
+                        obj.put("text", "You turn buzzer " + text);
+                        Constants.databaseReference().child(Constants.notifications).push().setValue(obj).addOnSuccessListener(unused1 -> Constants.dismissDialog());
+                    })
                     .addOnFailureListener(e -> {
                         Constants.dismissDialog();
                         Toast.makeText(ControlsActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();

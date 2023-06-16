@@ -1,43 +1,37 @@
 package com.moutamid.controlsapp.ui;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import android.graphics.Color;
-import android.graphics.DashPathEffect;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.Legend;
-import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
-import com.github.mikephil.charting.formatter.IFillFormatter;
-import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.highlight.Highlight;
-import com.github.mikephil.charting.interfaces.dataprovider.LineDataProvider;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
-import com.github.mikephil.charting.utils.Utils;
+import com.github.mikephil.charting.utils.ColorTemplate;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
+import com.moutamid.controlsapp.Constants;
 import com.moutamid.controlsapp.R;
 import com.moutamid.controlsapp.databinding.ActivityStatsBinding;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class StatsActivity extends AppCompatActivity implements OnChartValueSelectedListener {
     ActivityStatsBinding binding;
-    private LineChart chart;
+    private LineChart chart, humidityChart;
     Typeface tfRegular;
 
     @Override
@@ -46,7 +40,11 @@ public class StatsActivity extends AppCompatActivity implements OnChartValueSele
         binding = ActivityStatsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        Constants.initDialog(this);
+        Constants.showDialog();
+
         chart = binding.tempChart;
+        humidityChart = binding.humidityChart;
 
         binding.humidityChart.setTouchEnabled(true);
         binding.humidityChart.setPinchZoom(true);
@@ -54,185 +52,382 @@ public class StatsActivity extends AppCompatActivity implements OnChartValueSele
         binding.tempChart.setTouchEnabled(true);
         binding.tempChart.setPinchZoom(true);
 
+        binding.back.setOnClickListener(v -> finish());
+
         tfRegular = Typeface.SANS_SERIF;
 
-        {   // // Chart Style // //
+        getGas();
+        getHumidity();
+        getTemp();
 
-            // background color
-            chart.setBackgroundColor(Color.WHITE);
+        Constants.databaseReference().child(Constants.values).child(Constants.temperature)
+                        .addValueEventListener(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                if (snapshot.exists()){
+                                    float max = Float.valueOf(snapshot.child("max").getValue(String.class));
+                                    float min = Float.valueOf(snapshot.child("min").getValue(String.class));
+                                    temperatureChart(max, min);
+                                }
+                                Constants.dismissDialog();
+                            }
 
-            // disable description text
-            chart.getDescription().setEnabled(false);
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+                                Constants.dismissDialog();
+                                Toast.makeText(StatsActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
 
-            // enable touch gestures
-            chart.setTouchEnabled(true);
+        Constants.databaseReference().child(Constants.values).child(Constants.humidity)
+                        .addValueEventListener(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                if (snapshot.exists()){
+                                    float max = Float.valueOf(snapshot.child("max").getValue(String.class));
+                                    float min = Float.valueOf(snapshot.child("min").getValue(String.class));
+                                   humidityChart(max, min);
+                                }
+                                Constants.dismissDialog();
+                            }
 
-            // set listeners
-            chart.setOnChartValueSelectedListener(this);
-            chart.setDrawGridBackground(false);
+                            @Override
+                            public void onCancelled(@NonNull DatabaseError error) {
+                                Constants.dismissDialog();
+                                Toast.makeText(StatsActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
 
-            // create marker to display box when values are selected
-//            MyMarkerView mv = new MyMarkerView(this, R.layout.custom_marker_view);
-//
-//            // Set the marker to the chart
-//            mv.setChartView(chart);
-//            chart.setMarker(mv);
+    }
 
-            // enable scaling and dragging
-            chart.setDragEnabled(true);
-            chart.setScaleEnabled(true);
-            // chart.setScaleXEnabled(true);
-            // chart.setScaleYEnabled(true);
+    private void humidityChart(float max, float min) {
+        humidityChart.getDescription().setEnabled(false);
 
-            // force pinch zoom along both axis
-            chart.setPinchZoom(true);
-        }
+        // enable touch gestures
+        humidityChart.setTouchEnabled(true);
 
-        XAxis xAxis;
-        {   // // X-Axis Style // //
-            xAxis = chart.getXAxis();
+        humidityChart.setDragDecelerationFrictionCoef(0.9f);
 
-            // vertical grid lines
-            xAxis.enableGridDashedLine(10f, 10f, 0f);
-        }
+        // enable scaling and dragging
+        humidityChart.setDragEnabled(true);
+        humidityChart.setScaleEnabled(true);
+        humidityChart.setVisibleXRangeMaximum(6);
+        humidityChart.setDrawGridBackground(false);
+        humidityChart.setHighlightPerDragEnabled(true);
 
-        YAxis yAxis;
-        {   // // Y-Axis Style // //
-            yAxis = chart.getAxisLeft();
+        // if disabled, scaling can be done on x- and y-axis separately
+        humidityChart.setPinchZoom(true);
 
-            // disable dual axis (only use LEFT axis)
-            chart.getAxisRight().setEnabled(false);
+        // set an alternative background color
+        humidityChart.setBackgroundColor(getResources().getColor(R.color.back));
 
-            // horizontal grid lines
-            yAxis.enableGridDashedLine(10f, 10f, 0f);
+        humidityChart.animateX(1500);
 
-            // axis range
-            yAxis.setAxisMaximum(200f);
-            yAxis.setAxisMinimum(-50f);
-        }
+        // get the legend (only possible after setting data)
+        Legend l = humidityChart.getLegend();
 
+        // modify the legend ...
+        l.setForm(Legend.LegendForm.LINE);
+//        l.setTypeface(tfLight);
+        l.setTextSize(11f);
+        l.setTextColor(Color.WHITE);
+        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
+        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        l.setDrawInside(false);
+//        l.setYOffset(11f);
 
-        {   // // Create Limit Lines // //
-            LimitLine llXAxis = new LimitLine(9f, "Index 10");
-            llXAxis.setLineWidth(4f);
-            llXAxis.enableDashedLine(10f, 10f, 0f);
-            llXAxis.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-            llXAxis.setTextSize(10f);
-            llXAxis.setTypeface(tfRegular);
+        XAxis xAxis = humidityChart.getXAxis();
+//        xAxis.setTypeface(tfLight);
+        xAxis.setTextSize(11f);
+        xAxis.setTextColor(getResources().getColor(R.color.dark));
+        xAxis.setDrawGridLines(false);
+        xAxis.setDrawAxisLine(false);
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
 
-            LimitLine ll1 = new LimitLine(150f, "Upper Limit");
-            ll1.setLineWidth(4f);
-            ll1.enableDashedLine(10f, 10f, 0f);
-            ll1.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_TOP);
-            ll1.setTextSize(10f);
-            ll1.setTypeface(tfRegular);
+        YAxis leftAxis = humidityChart.getAxisLeft();
+//        leftAxis.setTypeface(tfLight);
+        leftAxis.setTextColor(getResources().getColor(R.color.purple));
+        leftAxis.setAxisMaximum(max);
+        leftAxis.setAxisMinimum(min);
+        leftAxis.setDrawGridLines(false);
+        leftAxis.setGranularityEnabled(true);
 
-            LimitLine ll2 = new LimitLine(-30f, "Lower Limit");
-            ll2.setLineWidth(4f);
-            ll2.enableDashedLine(10f, 10f, 0f);
-            ll2.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-            ll2.setTextSize(10f);
-            ll2.setTypeface(tfRegular);
+        // YAxis rightAxis = chart.getAxisRight();
+        //rightAxis.setEnabled(false);
+////        rightAxis.setTypeface(tfLight);
+//        rightAxis.setTextColor(Color.RED);
+//        rightAxis.setAxisMaximum(900);
+//        rightAxis.setAxisMinimum(-200);
+//        rightAxis.setDrawGridLines(false);
+//        rightAxis.setDrawZeroLine(false);
+//        rightAxis.setGranularityEnabled(false);
 
-            // draw limit lines behind data instead of on top
-            yAxis.setDrawLimitLinesBehindData(true);
-            xAxis.setDrawLimitLinesBehindData(true);
+        setDataHumidity();
+    }
 
-            // add limit lines
-            yAxis.addLimitLine(ll1);
-            yAxis.addLimitLine(ll2);
-            //xAxis.addLimitLine(llXAxis);
-        }
-        setData(45, 180);
+    private void setDataHumidity() {
+        ArrayList<Entry> values1 = new ArrayList<>();
+        Constants.databaseReference().child(Constants.graph).child(Constants.humidity)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        String temp = "";
+                        int ind=0;
+                        values1.clear();
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            String name = child.getKey();
+                            temp = String.valueOf(snapshot.child(name).child("temp").getValue(Integer.class));
+                            values1.add(new Entry(ind, Float.parseFloat(temp)));
+                            ind=ind+1;
 
-        // draw points over time
+                        }
+
+                        LineDataSet set1;
+
+                        if (humidityChart.getData() != null && humidityChart.getData().getDataSetCount() > 0) {
+                            set1 = (LineDataSet) humidityChart.getData().getDataSetByIndex(0);
+                            set1.setValues(values1);
+
+                            humidityChart.getData().notifyDataChanged();
+                            humidityChart.notifyDataSetChanged();
+                            humidityChart.invalidate();
+                        } else {
+                            // create a dataset and give it a type
+                            set1 = new LineDataSet(values1, "Humidity Dataset");
+                            set1.setAxisDependency(YAxis.AxisDependency.LEFT);
+                            set1.setColor(getResources().getColor(R.color.purple));
+                            set1.setCircleColor(getResources().getColor(R.color.light));
+                            set1.setLineWidth(2f);
+                            set1.setCircleRadius(3f);
+                            set1.setFillAlpha(65);
+                            set1.setHighlightEnabled(true);
+                            set1.setFillColor(ColorTemplate.getHoloBlue());
+                            set1.setHighLightColor(Color.rgb(244, 117, 117));
+                            set1.setDrawCircleHole(false);
+                            set1.setDrawFilled(true);
+                            // create a data object with the data sets
+                            LineData data = new LineData(set1);
+                            data.setValueTextColor(getResources().getColor(R.color.dark));
+                            data.setValueTextSize(9f);
+
+                            // set data
+                            humidityChart.setData(data);
+
+                            List<ILineDataSet> sets = humidityChart.getData()
+                                    .getDataSets();
+
+                            for (ILineDataSet iSet : sets) {
+
+                                LineDataSet set = (LineDataSet) iSet;
+                                set.setMode(set.getMode() == LineDataSet.Mode.CUBIC_BEZIER
+                                        ? LineDataSet.Mode.LINEAR
+                                        :  LineDataSet.Mode.CUBIC_BEZIER);
+                            }
+                            humidityChart.invalidate();
+
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                });
+    }
+
+    private void temperatureChart(float max, float min) {
+        chart.getDescription().setEnabled(false);
+
+        // enable touch gestures
+        chart.setTouchEnabled(true);
+
+        chart.setDragDecelerationFrictionCoef(0.9f);
+
+        // enable scaling and dragging
+        chart.setDragEnabled(true);
+        chart.setScaleEnabled(true);
+        chart.setDrawGridBackground(false);
+        chart.setHighlightPerDragEnabled(true);
+        chart.setVisibleXRangeMaximum(6);
+        // if disabled, scaling can be done on x- and y-axis separately
+        chart.setPinchZoom(true);
+
+        // set an alternative background color
+        chart.setBackgroundColor(getResources().getColor(R.color.back));
+
         chart.animateX(1500);
 
         // get the legend (only possible after setting data)
         Legend l = chart.getLegend();
 
-        // draw legend entries as lines
+        // modify the legend ...
         l.setForm(Legend.LegendForm.LINE);
+//        l.setTypeface(tfLight);
+        l.setTextSize(11f);
+        l.setTextColor(getResources().getColor(R.color.dark));
+        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
+        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        l.setDrawInside(false);
+//        l.setYOffset(11f);
+
+        XAxis xAxis = chart.getXAxis();
+//        xAxis.setTypeface(tfLight);
+        xAxis.setTextSize(11f);
+        xAxis.setTextColor(getResources().getColor(R.color.dark));
+        xAxis.setDrawGridLines(false);
+        xAxis.setDrawAxisLine(false);
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+
+        YAxis leftAxis = chart.getAxisLeft();
+//        leftAxis.setTypeface(tfLight);
+        leftAxis.setTextColor(getResources().getColor(R.color.purple));
+        leftAxis.setAxisMaximum(max);
+        leftAxis.setAxisMinimum(min);
+        leftAxis.setDrawGridLines(false);
+        leftAxis.setGranularityEnabled(true);
+
+       // YAxis rightAxis = chart.getAxisRight();
+        //rightAxis.setEnabled(false);
+////        rightAxis.setTypeface(tfLight);
+//        rightAxis.setTextColor(Color.RED);
+//        rightAxis.setAxisMaximum(900);
+//        rightAxis.setAxisMinimum(-200);
+//        rightAxis.setDrawGridLines(false);
+//        rightAxis.setDrawZeroLine(false);
+//        rightAxis.setGranularityEnabled(false);
+
+       setDataTemp();
     }
 
-    private void setData(int count, float range) {
+    private void setDataTemp() {
 
-        ArrayList<Entry> values = new ArrayList<>();
+        ArrayList<Entry> values1 = new ArrayList<>();
+        Constants.databaseReference().child(Constants.graph).child(Constants.temperature)
+                .addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String temp = "";
+                int ind=0;
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    String name = child.getKey();
+                    temp = String.valueOf(snapshot.child(name).child("temp").getValue(Integer.class));
+                    values1.add(new Entry(ind, Float.parseFloat(temp)));
+                    ind=ind+1;
 
-        for (int i = 0; i < count; i++) {
-
-            float val = (float) (Math.random() * range) - 30;
-            values.add(new Entry(i, val, getResources().getDrawable(R.drawable.humidity)));
-        }
-
-        LineDataSet set1;
-
-        if (chart.getData() != null &&
-                chart.getData().getDataSetCount() > 0) {
-            set1 = (LineDataSet) chart.getData().getDataSetByIndex(0);
-            set1.setValues(values);
-            set1.notifyDataSetChanged();
-            chart.getData().notifyDataChanged();
-            chart.notifyDataSetChanged();
-        } else {
-            // create a dataset and give it a type
-            set1 = new LineDataSet(values, "DataSet 1");
-
-            set1.setDrawIcons(false);
-
-            // draw dashed line
-            set1.enableDashedLine(10f, 5f, 0f);
-
-            // black lines and points
-            set1.setColor(Color.BLACK);
-            set1.setCircleColor(Color.BLACK);
-
-            // line thickness and point size
-            set1.setLineWidth(1f);
-            set1.setCircleRadius(3f);
-
-            // draw points as solid circles
-            set1.setDrawCircleHole(false);
-
-            // customize legend entry
-            set1.setFormLineWidth(1f);
-            set1.setFormLineDashEffect(new DashPathEffect(new float[]{10f, 5f}, 0f));
-            set1.setFormSize(15.f);
-
-            // text size of values
-            set1.setValueTextSize(9f);
-
-            // draw selection line as dashed
-            set1.enableDashedHighlightLine(10f, 5f, 0f);
-
-            // set the filled area
-            set1.setDrawFilled(true);
-            set1.setFillFormatter(new IFillFormatter() {
-                @Override
-                public float getFillLinePosition(ILineDataSet dataSet, LineDataProvider dataProvider) {
-                    return chart.getAxisLeft().getAxisMinimum();
                 }
-            });
 
-            // set color of filled area
-            if (Utils.getSDKInt() >= 18) {
-                // drawables only supported on api level 18 and above
-                Drawable drawable = ContextCompat.getDrawable(this, R.drawable.server);
-                set1.setFillDrawable(drawable);
-            } else {
-                set1.setFillColor(Color.BLACK);
+                LineDataSet set1;
+
+                if (chart.getData() != null && chart.getData().getDataSetCount() > 0) {
+                    set1 = (LineDataSet) chart.getData().getDataSetByIndex(0);
+                    set1.setValues(values1);
+
+                    chart.getData().notifyDataChanged();
+                    chart.notifyDataSetChanged();
+                    chart.invalidate();
+                } else {
+                    // create a dataset and give it a type
+                    set1 = new LineDataSet(values1, "Temperature Dataset");
+                    set1.setAxisDependency(YAxis.AxisDependency.LEFT);
+                    set1.setColor(getResources().getColor(R.color.purple));
+                    set1.setCircleColor(getResources().getColor(R.color.light));
+                    set1.setLineWidth(2f);
+                    set1.setCircleRadius(3f);
+                    set1.setFillAlpha(65);
+                    set1.setHighlightEnabled(true);
+                    set1.setFillColor(ColorTemplate.getHoloBlue());
+                    set1.setHighLightColor(Color.rgb(244, 117, 117));
+                    set1.setDrawCircleHole(false);
+                    set1.setDrawFilled(true);
+                    // create a data object with the data sets
+                    LineData data = new LineData(set1);
+                    data.setValueTextColor(getResources().getColor(R.color.dark));
+                    data.setValueTextSize(9f);
+
+                    // set data
+                    chart.setData(data);
+
+                    List<ILineDataSet> sets = chart.getData()
+                            .getDataSets();
+
+                    for (ILineDataSet iSet : sets) {
+
+                        LineDataSet set = (LineDataSet) iSet;
+                        set.setMode(set.getMode() == LineDataSet.Mode.CUBIC_BEZIER
+                                ? LineDataSet.Mode.LINEAR
+                                :  LineDataSet.Mode.CUBIC_BEZIER);
+                    }
+                    chart.invalidate();
+
+                }
+
             }
 
-            ArrayList<ILineDataSet> dataSets = new ArrayList<>();
-            dataSets.add(set1); // add the data sets
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
 
-            // create a data object with the data sets
-            LineData data = new LineData(dataSets);
-
-            // set data
-            chart.setData(data);
-        }
+            }
+        });
     }
+
+    private void getTemp() {
+        Constants.databaseReference().child(Constants.temperature).addValueEventListener(
+                new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        int tem = snapshot.getValue(Integer.class);
+                        binding.temp.setText("Temperature : " + tem + "\u00B0 C");
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                }
+        );
+    }
+
+    private void getHumidity() {
+        Constants.databaseReference().child(Constants.humidity).addValueEventListener(
+                new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        double humi = snapshot.getValue(Double.class);
+                        binding.humidity.setText("Humidity : " + String.format("%.2f", humi) + "%");
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                }
+        );
+    }
+
+    private void getGas() {
+        Constants.databaseReference().child(Constants.gasLeakage).addValueEventListener(
+                new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        boolean gas = snapshot.getValue(Boolean.class);
+                        if (gas) {
+                            binding.gas.setText("Gas Leakage : ON");
+                        } else {
+                            binding.gas.setText("Gas Leakage : OFF");
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                    }
+                }
+        );
+    }
+
 
     @Override
     public void onValueSelected(Entry e, Highlight h) {

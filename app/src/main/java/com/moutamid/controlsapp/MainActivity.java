@@ -23,49 +23,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Constants.checkApp(this);
 
-        setupViewPager();
     }
 
-    private void setupViewPager() {
-        ViewPager viewPager = findViewById(R.id.viewPager);
-        ViewPagerAdapter adapter = new ViewPagerAdapter(getSupportFragmentManager());
 
-        adapter.addFragment(new LoginFragment(), "Login");
-        adapter.addFragment(new SignupFragment(), "Signup");
-
-        viewPager.setAdapter(adapter);
-
-        TabLayout tabLayout = findViewById(R.id.tabs);
-        tabLayout.setupWithViewPager(viewPager);
-    }
-
-    static class ViewPagerAdapter extends FragmentPagerAdapter {
-        private final List<Fragment> mFragmentList = new ArrayList<>();
-        private final List<String> mFragmentTitleList = new ArrayList<>();
-
-        public ViewPagerAdapter(FragmentManager fm) {
-            super(fm);
-        }
-
-        @Override
-        public Fragment getItem(int arg0) {
-            return this.mFragmentList.get(arg0);
-        }
-
-        @Override
-        public int getCount() {
-            return this.mFragmentList.size();
-        }
-
-        public void addFragment(Fragment fragment, String title) {
-            this.mFragmentList.add(fragment);
-            this.mFragmentTitleList.add(title);
-        }
-
-        @Override
-        public CharSequence getPageTitle(int position) {
-            return this.mFragmentTitleList.get(position);
-        }
-    }
 
 }

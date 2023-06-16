@@ -10,8 +10,12 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.moutamid.controlsapp.Constants;
 import com.moutamid.controlsapp.R;
 import com.moutamid.controlsapp.databinding.ActivityDevicesBinding;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DevicesActivity extends AppCompatActivity {
     ActivityDevicesBinding binding;
@@ -20,6 +24,8 @@ public class DevicesActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityDevicesBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        Constants.initDialog(this);
 
         binding.back.setOnClickListener(v -> finish());
 
@@ -39,12 +45,36 @@ public class DevicesActivity extends AppCompatActivity {
 
         auto.setOnClickListener(v -> {
             dialog.dismiss();
-            Toast.makeText(this, "Started", Toast.LENGTH_SHORT).show();
+            Constants.showDialog();
+            Constants.databaseReference().child("state").child("light").setValue(true)
+                    .addOnSuccessListener(unused -> {
+                        Map<String, Object> obj = new HashMap<>();
+                        obj.put("text", "You auto start the device");
+                        Constants.databaseReference().child(Constants.notifications).push().setValue(obj).addOnSuccessListener(unused1 -> Constants.dismissDialog());
+                    })
+                    .addOnFailureListener(e -> {
+                        Constants.dismissDialog();
+                        Toast.makeText(DevicesActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+            Constants.databaseReference().child("state").child("buzzer").setValue(true)
+                    .addOnSuccessListener(unused -> {
+
+                    })
+                    .addOnFailureListener(e -> {
+                        Constants.dismissDialog();
+                        Toast.makeText(DevicesActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
         });
 
         manual.setOnClickListener(v -> {
             dialog.dismiss();
-            startActivity(new Intent(DevicesActivity.this, ControlsActivity.class));
+            Constants.showDialog();
+            Map<String, Object> obj = new HashMap<>();
+            obj.put("text", "You manually started device");
+            Constants.databaseReference().child(Constants.notifications).push().setValue(obj).addOnSuccessListener(unused1 -> {
+                Constants.dismissDialog();
+                startActivity(new Intent(DevicesActivity.this, ControlsActivity.class));
+            });
         });
 
         dialog.show();

@@ -28,6 +28,13 @@ import java.util.Locale;
 
 public class Constants {
     public static final String USER = "user";
+    public static final String values = "values";
+    public static final String graph = "graph";
+    public static final String gasLeakage = "gasLeakage";
+    public static final String humidity = "humidity";
+    public static final String temperature = "temperature";
+    public static final String notifications = "notifications";
+    public static final String gas = "gas";
     static Dialog dialog;
 
     public static void initDialog(Context context){
