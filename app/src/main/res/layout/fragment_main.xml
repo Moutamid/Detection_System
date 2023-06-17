@@ -22,6 +22,7 @@
                 android:padding="15sp"
                 android:text="Lorem Lipsm yhjsoijiugs"
                 android:textSize="18sp"
+                android:visibility="invisible"
                 android:fontFamily="@font/poppins"
                 android:textColor="@color/black" />
 

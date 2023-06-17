@@ -22,20 +22,25 @@ public class ControlsActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         Constants.initDialog(this);
-        Constants.showDialog();
 
-        Constants.databaseReference().child("state").get().addOnSuccessListener(dataSnapshot -> {
-            Constants.dismissDialog();
-            if (dataSnapshot.exists()){
-                boolean humidity = dataSnapshot.child("light").getValue(Boolean.class);
-                boolean gas = dataSnapshot.child("buzzer").getValue(Boolean.class);
-                binding.switchButtonHumidity.setChecked(humidity);
-                binding.switchButtonGas.setChecked(gas);
-            }
-        }).addOnFailureListener(e -> {
-            Constants.dismissDialog();
-            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        });
+        if (!Constants.isWifiConnected(this)){
+            binding.switchButtonGas.setEnabled(false);
+            binding.switchButtonHumidity.setEnabled(false);
+        } else {
+            Constants.showDialog();
+            Constants.databaseReference().child("state").get().addOnSuccessListener(dataSnapshot -> {
+                Constants.dismissDialog();
+                if (dataSnapshot.exists()){
+                    boolean humidity = dataSnapshot.child("light").getValue(Boolean.class);
+                    boolean gas = dataSnapshot.child("buzzer").getValue(Boolean.class);
+                    binding.switchButtonHumidity.setChecked(humidity);
+                    binding.switchButtonGas.setChecked(gas);
+                }
+            }).addOnFailureListener(e -> {
+                Constants.dismissDialog();
+                Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+        }
 
         binding.back.setOnClickListener(v -> finish());
 

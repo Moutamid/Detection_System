@@ -43,6 +43,11 @@ public class StatsActivity extends AppCompatActivity implements OnChartValueSele
         Constants.initDialog(this);
         Constants.showDialog();
 
+        if (!Constants.isWifiConnected(this)){
+            Constants.dismissDialog();
+            Toast.makeText(this, "You are offline", Toast.LENGTH_SHORT).show();
+        }
+
         chart = binding.tempChart;
         humidityChart = binding.humidityChart;
 

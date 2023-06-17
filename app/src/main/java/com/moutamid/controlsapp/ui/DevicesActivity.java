@@ -29,8 +29,20 @@ public class DevicesActivity extends AppCompatActivity {
 
         binding.back.setOnClickListener(v -> finish());
 
+        if (!Constants.isWifiConnected(this)){
+            binding.isOnline.setText("Offline");
+            binding.signal.setImageResource(R.drawable.no_signal);
+            binding.statusCard.setCardBackgroundColor(getResources().getColor(R.color.red));
+        }
+
+        binding.add.setOnClickListener(v -> Toast.makeText(this, "upcoming feature", Toast.LENGTH_SHORT).show());
+
         binding.device1.setOnClickListener(v -> {
-            showDialog();
+            if (!Constants.isWifiConnected(this)){
+                Toast.makeText(this, "Device is offline", Toast.LENGTH_SHORT).show();
+            } else {
+                showDialog();
+            }
         });
     }
 

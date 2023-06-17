@@ -10,6 +10,8 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.view.Window;
 
@@ -36,6 +38,13 @@ public class Constants {
     public static final String notifications = "notifications";
     public static final String gas = "gas";
     static Dialog dialog;
+
+    public static boolean isWifiConnected(Context context) {
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+
+        return networkInfo != null && networkInfo.isConnected();
+    }
 
     public static void initDialog(Context context){
         dialog = new Dialog(context);
