@@ -101,7 +101,7 @@ public class ValuesActivity extends AppCompatActivity {
             Constants.databaseReference().child(Constants.values).child(Constants.gas)
                     .setValue(gas).addOnFailureListener(e -> Constants.dismissDialog()).addOnSuccessListener(unused -> Constants.dismissDialog());
             Map<String, Object> obj = new HashMap<>();
-            obj.put("text", "You turn adjust the temperature/humidity values");
+            obj.put("text", "You adjust the temperature/humidity values");
             Constants.databaseReference().child(Constants.notifications).push().setValue(obj).addOnSuccessListener(unused1 -> Constants.dismissDialog());
         });
 
